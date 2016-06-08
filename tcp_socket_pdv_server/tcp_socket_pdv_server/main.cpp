@@ -1,10 +1,10 @@
 //
 //  main.cpp
-//  tcp_socket_pdv_server
+//  tcp_socket_pdv_client
 //
-//  Created by Rodrigo Bueno Tomiosso on 24/05/16.
-//  Copyright © 2016 mourodrigo. All rights reserved.
-//
+// Trabalho 2 - Camada de Transporte - Redes de computadores - UFFS
+// Rodrigo Bueno Tomiosso e Edimar Junior
+
 
 #include <iostream>
 #include <sys/socket.h>
@@ -13,15 +13,18 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <vector>
-#include <fstream>
+#include "AssocArray.cpp"
+#include <string>
 
-using namespace std;
+#define SERVER_PORT 6790
+#define SEPARATOR "#"
 
-class Product{
+
+class Product{ // classe para tratamento das informações dos produtos
 public:
     int product;
     int quantity;
-    float value;
+    int value;
     
     Product(int _product, int _quantity, float _value){
         product = _product;
@@ -30,21 +33,27 @@ public:
     }
 };
 
-bool fileExists(const char *filename){ //Verifica se arquivo existe
-    ifstream ifile(filename);
-    if (ifile) {
-        return true;
-    }else{
-        return false;
-    }
+
+void send(int port, std::string address, std::string message){ // cria um socket e envia uma pensagem para determinado destino
+    struct sockaddr_in servaddr;
+    
+    memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(port);
+    servaddr.sin_addr.s_addr = inet_addr(address.c_str());
+    
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    connect(sock, (struct sockaddr *)&servaddr, sizeof(servaddr));
+    send(sock, message.c_str(), strlen(message.c_str()), 0);
+    close(sock);
 }
 
-vector<string> explode( const string& s, const string& delimiter ){ //Explode que divide uma string conforme o separador recebido
-    vector<string> result;
-    string::size_type from = 0;
-    string::size_type to = 0;
+std::vector<std::string> explode( const std::string& s, const std::string& delimiter ){ //Explode que divide uma string conforme o separador recebido
+    std::vector<std::string> result;
+    std::string::size_type from = 0;
+    std::string::size_type to = 0;
     
-    while ( to != string::npos ){
+    while ( to != std::string::npos ){
         to = s.find( delimiter, from );
         if ( from < s.size() && from != to ){
             result.push_back( s.substr( from, to - from ) );
@@ -54,50 +63,36 @@ vector<string> explode( const string& s, const string& delimiter ){ //Explode qu
     return result;
 }
 
-vector<Product> getProducts(string path){//Função que retorna todos os banco de dados cadastrados
-    vector <Product> dbs;
-    if(fileExists(path.c_str())){
-        string line;
-        ifstream file (path);
-        if (file.is_open()){
-            while ( file.good() ){
-                getline (file,line);
-                if(line != "\0"){//Se a linha for vazia, não executa o procedimento
-                    vector <string> databaseline;
-                    databaseline = explode(line, ", ");
-                    int id, quantity;
-                    id = atoi(databaseline.at(0).c_str());//Converte para inteiro o id
-                    quantity = atoi(databaseline.at(1).c_str());
-                    float value = atof(databaseline.at(2).c_str());//Converte para inteiro o id da tablespace
-                    Product p = Product(id,quantity, value);
-                    dbs.push_back(p);//Coloca no vetor dos banco de dados
-                }
-            }
-            file.close();
-            return dbs;
-        }else{
-            cout << "Erro ao abrir arquivo "<< path <<endl;
-            return dbs;
+void reply(std::vector<Product> products, std::string transaction, std::string address, std::string port){// metodo que faz o calculo total do pedido e envia para o cliente
+    int p = fork();
+    if(p==0){ // se esta dentro da thread filho
+        float total = 0;
+        for (int p = 0; p<products.size(); p++) {
+            total+=(products.at(p).value*products.at(p).quantity);
         }
-    }else{
-        cout << "Arquivo nao encontrado "<< path <<endl;
+        std::cout <<std::endl<< "TOTAL DO PEDIDO "<< transaction<< " = " << total;
+        
+        send(atoi(port.c_str()), address, std::to_string(total));
+        
     }
-    return dbs;
 }
 
 
-int main(int argc, char **argv)
-{
+void listen(){ // metodo que cria um socket em determinada porta para ouvir os dados enviados pelo cliente
     struct sockaddr_in servaddr;
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(6789);
+    servaddr.sin_port = htons(SERVER_PORT);
     
     bind(sock, (struct sockaddr *)&servaddr, sizeof(servaddr));
     listen(sock, 5);
+    
+    std:: cout << "Server running on port: " << SERVER_PORT << std::endl;
+    
+    AssocArray<std::vector<Product>> transactions;
     
     while(1)
     {
@@ -109,15 +104,37 @@ int main(int argc, char **argv)
             char message[messageLength+1];
             int in, index = 0, limit = messageLength;
             
-            while ((in = (int)recv(clisock, &message[index], messageLength, 0)) > 0)
+            while ((in = recv(clisock, &message[index], messageLength, 0)) > 0)
             {
                 index += in;
                 limit -= in;
             }
+            std::vector<std::string> messageArray = explode(message, "_");
+            if (messageArray.size()>1) {
+                std::string transaction = messageArray.at(0);
+                
+                if (messageArray.at(1).compare("end")==0) {
+                    reply(transactions[transaction], transaction, messageArray.at(2), messageArray.at(3));
+                    transactions[transaction].clear();
+                }else{
+                    printf("Pacote aceito %s\n", message);
+                    Product p = Product(atoi(messageArray.at(1).c_str()), atoi(messageArray.at(2).c_str()), atof(messageArray.at(3).c_str()));
+                    transactions[transaction].push_back(p);
+                }
+                
+            }else{
+                printf("pacote ignorado %s\n", message);
+                //ignora o pacote
+            }
             
-            printf("%s\n", message);
         }
-        
         close(clisock);
     }
+}
+
+
+
+int main(int argc, char **argv)
+{
+    listen();
 }
