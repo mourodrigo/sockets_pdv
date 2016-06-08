@@ -15,8 +15,9 @@ d) devolve a soma com o valor total do pedido (somatório de (quantidade * valor
 # Exemplo de execução do servidor:
 
 
-
 Server running on port: 6792
+
+
 Pacote aceito 1465347381_25_10_1
 Pacote aceito 1465347381_87_10_8
 Pacote aceito 1465347381_99_7_12
@@ -121,6 +122,7 @@ Pacote aceito 1465347381_69_1_17
 # Exemplo de execução no cliente
 
 Identificador da transação: 1465347381
+
 Transmitindo: 1465347381_25_10_12_
 Transmitindo: 1465347381_87_10_8_
 Transmitindo: 1465347381_99_7_12_
