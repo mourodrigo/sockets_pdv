@@ -1,16 +1,16 @@
 # sockets_pdv
 
-Implementação de dois programas na linguagem de sua eleição. Um se chamará “cliente” e outro “servidor”.
+Implementação de dois programas em linguagem C. Um se chamará “cliente” e outro “servidor”.
 
 Cliente: 
-a) inicia por linha de comando com dois argumentos (porta e pedido.txt). Onde “porta” é o número da porta em que o servidor atende. Onde “pedido.txt” é um arquivo texto em que as linhas têm o seguinte formato (produto, quantidade, valor unitario).
+a) Inicia por linha de comando com dois argumentos (porta e pedido.txt). Onde “porta” é o número da porta em que o servidor atende. Onde “pedido.txt” é um arquivo texto em que as linhas têm o seguinte formato (produto, quantidade, valor unitario).
 
 O cliente usa TCP para conectar se com o servidor, lê o arquivo texto e envia para o servidor.
 
 Servidor:
-b) inicia por linha de comando (pode usar porta dinâmica ou por argumento). Cria um socket na porta especificada, escuta e aceita conexões de clientes.
-c) usa threads para manipular múltiplos clientes.
-d) devolve a soma com o valor total do pedido (somatório de (quantidade * valor)).
+b) Inicia por linha de comando (pode usar porta dinâmica ou por argumento). Cria um socket na porta especificada, escuta e aceita conexões de clientes.
+c) Usa threads para manipular múltiplos clientes.
+d) Devolve a soma com o valor total do pedido (somatório de (quantidade * valor)).
 
 # Exemplo de execução do servidor:
 
